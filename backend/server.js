@@ -52,3 +52,7 @@ app.listen(PORT, '0.0.0.0', () => {
   });
   console.log(`=================================================\n`);
 });
+
+app.get("/", (req, res) => {
+  res.send("Smart Travel Assistant Backend is Running 🚀");
+});
