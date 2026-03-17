@@ -3,35 +3,23 @@ const router = express.Router();
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const { OAuth2Client } = require('google-auth-library');
-const nodemailer = require('nodemailer');
+const sgMail = require('@sendgrid/mail');
+const nodemailer = require('nodemailer'); // Keep nodemailer for local fallback
 const crypto = require('crypto');
 const OTP = require('../models/OTP');
 
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID || "370403775632-ekl0knt2d7ukm2uk94qde5sqr3gho6ck.apps.googleusercontent.com");
 
+if (process.env.SENDGRID_API_KEY) {
+  sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+}
+
+// Fallback for local development if you don't have SendGrid yet
 const transporter = nodemailer.createTransport({
-  host: 'smtp.gmail.com', // Revert to hostname but use alternative port
-  port: 2525, // Port 2525 is often open on Render when 587/465 are blocked
-  secure: false,
+  service: 'gmail',
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
-  },
-  tls: {
-    rejectUnauthorized: false
-  },
-  family: 4,
-  connectionTimeout: 30000,
-  greetingTimeout: 30000,
-  socketTimeout: 30000
-});
-
-// Verify transporter connection at startup
-transporter.verify((error, success) => {
-  if (error) {
-    console.error('SMTP Transporter Error:', error);
-  } else {
-    console.log('SMTP Server is ready to take our messages');
   }
 });
 
@@ -72,9 +60,9 @@ router.post('/send-register-otp', async (req, res) => {
       type: 'registration'
     });
 
-    const mailOptions = {
-      from: process.env.EMAIL_USER,
+    const msg = {
       to: email,
+      from: process.env.EMAIL_USER,
       subject: 'Your Registration OTP',
       text: `Your OTP for registration is: ${otpCode}. It will expire in 15 minutes.`,
       html: `
@@ -89,20 +77,19 @@ router.post('/send-register-otp', async (req, res) => {
       `
     };
 
-    await transporter.sendMail(mailOptions);
+    if (process.env.SENDGRID_API_KEY) {
+      await sgMail.send(msg);
+    } else {
+      await transporter.sendMail(msg);
+    }
+
     console.log(`OTP sent successfully to ${email}`);
     res.json({ message: 'OTP sent successfully to your email' });
   } catch (error) {
-    console.error('Registration OTP Error Details:', {
-      message: error.message,
-      code: error.code,
-      command: error.command,
-      response: error.response
-    });
+    console.error('Registration OTP Error Details:', error);
     res.status(500).json({ 
-      message: 'Failed to send OTP', 
-      error: error.message,
-      code: error.code 
+      message: 'Failed to send OTP. This is likely due to the SMTP port being blocked on the server.',
+      error: error.message
     });
   }
 });
@@ -295,9 +282,9 @@ router.post('/forgot-password', async (req, res) => {
     };
     await user.save();
 
-    const mailOptions = {
-      from: process.env.EMAIL_USER,
+    const msg = {
       to: user.email,
+      from: process.env.EMAIL_USER,
       subject: 'Password Reset OTP',
       text: `Your OTP for password reset is: ${otpCode}. It will expire in 10 minutes.`,
       html: `
@@ -313,20 +300,18 @@ router.post('/forgot-password', async (req, res) => {
     };
 
     console.log(`Attempting to send OTP to ${email}...`);
-    await transporter.sendMail(mailOptions);
+    if (process.env.SENDGRID_API_KEY) {
+      await sgMail.send(msg);
+    } else {
+      await transporter.sendMail(msg);
+    }
     console.log(`OTP sent successfully to ${email}`);
     res.json({ message: 'OTP sent successfully' });
   } catch (error) {
-    console.error('Forgot Password Error Details:', {
-      message: error.message,
-      code: error.code,
-      command: error.command,
-      response: error.response
-    });
+    console.error('Forgot Password Error Details:', error);
     res.status(500).json({ 
       message: 'Failed to send OTP. Please check your email settings.',
-      error: error.message,
-      code: error.code
+      error: error.message
     });
   }
 });
