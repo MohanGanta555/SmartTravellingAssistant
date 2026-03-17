@@ -10,19 +10,23 @@ const OTP = require('../models/OTP');
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID || "370403775632-ekl0knt2d7ukm2uk94qde5sqr3gho6ck.apps.googleusercontent.com");
 
 const transporter = nodemailer.createTransport({
-  host: 'smtp.gmail.com',
-  port: 465,
-  secure: true, // Use SSL
+  service: 'gmail', // Let nodemailer handle the port and host for Gmail
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
   },
   tls: {
     rejectUnauthorized: false
-  },
-  connectionTimeout: 10000, // 10 seconds
-  greetingTimeout: 10000,
-  socketTimeout: 10000
+  }
+});
+
+// Verify transporter connection at startup
+transporter.verify((error, success) => {
+  if (error) {
+    console.error('SMTP Transporter Error:', error);
+  } else {
+    console.log('SMTP Server is ready to take our messages');
+  }
 });
 
 const isStrongPassword = (pwd) => {
@@ -80,10 +84,20 @@ router.post('/send-register-otp', async (req, res) => {
     };
 
     await transporter.sendMail(mailOptions);
+    console.log(`OTP sent successfully to ${email}`);
     res.json({ message: 'OTP sent successfully to your email' });
   } catch (error) {
-    console.error('Registration OTP Error:', error);
-    res.status(500).json({ message: 'Failed to send OTP' });
+    console.error('Registration OTP Error Details:', {
+      message: error.message,
+      code: error.code,
+      command: error.command,
+      response: error.response
+    });
+    res.status(500).json({ 
+      message: 'Failed to send OTP', 
+      error: error.message,
+      code: error.code 
+    });
   }
 });
 
@@ -297,8 +311,17 @@ router.post('/forgot-password', async (req, res) => {
     console.log(`OTP sent successfully to ${email}`);
     res.json({ message: 'OTP sent successfully' });
   } catch (error) {
-    console.error('Forgot Password Error:', error);
-    res.status(500).json({ message: 'Failed to send OTP. Please check your email settings.' });
+    console.error('Forgot Password Error Details:', {
+      message: error.message,
+      code: error.code,
+      command: error.command,
+      response: error.response
+    });
+    res.status(500).json({ 
+      message: 'Failed to send OTP. Please check your email settings.',
+      error: error.message,
+      code: error.code
+    });
   }
 });
 

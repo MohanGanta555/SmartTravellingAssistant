@@ -68,7 +68,8 @@ function Register() {
       setStep(2);
       console.log("OTP sent:", response.data);
     } catch (err) {
-      setError(err.response?.data?.message || "Failed to send OTP");
+      const errorMsg = err.response?.data?.error || err.response?.data?.message || "Failed to send OTP";
+      setError(errorMsg);
     } finally {
       setLoading(false);
     }
