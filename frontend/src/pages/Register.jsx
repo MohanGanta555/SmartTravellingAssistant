@@ -7,6 +7,9 @@ import API_URL from "../api";
 
 function Register() {
   const navigate = useNavigate();
+  const [step, setStep] = useState(1); // 1: Details, 2: OTP
+  const [otpCode, setOtpCode] = useState("");
+  const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -57,23 +60,42 @@ function Register() {
       return;
     }
 
+    setLoading(true);
+    try {
+      const response = await axios.post(`${API_URL}/auth/send-register-otp`, {
+        email: formData.email,
+      });
+      setStep(2);
+      console.log("OTP sent:", response.data);
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to send OTP");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyAndRegister = async (e) => {
+    e.preventDefault();
+    setError("");
+    if (!otpCode || otpCode.length !== 6) {
+      setError("Please enter a valid 6-digit OTP");
+      return;
+    }
+
+    setLoading(true);
     try {
       const response = await axios.post(`${API_URL}/auth/register`, {
-        firstName: formData.firstName,
-        lastName: formData.lastName,
-        username: formData.username,
-        mobile: formData.mobile,
-        address: formData.address,
-        email: formData.email,
-        password: formData.password,
-        dob: formData.dob,
+        ...formData,
+        otpCode,
       });
 
       console.log("Registration success:", response.data);
-      localStorage.setItem("userInfo", JSON.stringify(response.data));
+      sessionStorage.setItem("userInfo", JSON.stringify(response.data));
       window.location.href = "/";
     } catch (err) {
       setError(err.response?.data?.message || "Registration failed");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -97,156 +119,190 @@ function Register() {
   return (
     <div className="register-container">
       <div className="register-box">
-        <h2>Create Account</h2>
+        <h2>{step === 1 ? "Create Account" : "Verify Email"}</h2>
         {error && <div className="error-message" style={{color: 'red', marginBottom: '10px'}}>{error}</div>}
-        <form onSubmit={handleSubmit}>
-          <div className="input-group">
-            <label>First Name</label>
-            <input
-              type="text"
-              name="firstName"
-              value={formData.firstName}
-              onChange={handleChange}
-              placeholder="Enter your first name"
-              required
-            />
-          </div>
-          <div className="input-group">
-            <label>Last Name</label>
-            <input
-              type="text"
-              name="lastName"
-              value={formData.lastName}
-              onChange={handleChange}
-              placeholder="Enter your last name"
-              required
-            />
-          </div>
-          <div className="input-group">
-            <label>Username</label>
-            <input
-              type="text"
-              name="username"
-              value={formData.username}
-              onChange={handleChange}
-              placeholder="Choose a username"
-              required
-            />
-          </div>
-          <div className="input-group">
-            <label>Mobile Number</label>
-            <input
-              type="tel"
-              name="mobile"
-              value={formData.mobile}
-              onChange={handleChange}
-              placeholder="Enter your mobile number"
-              required
-            />
-          </div>
-          <div className="input-group">
-            <label>Address</label>
-            <input
-              type="text"
-              name="address"
-              value={formData.address}
-              onChange={handleChange}
-              placeholder="Enter your address"
-              required
-            />
-          </div>
-          <div className="input-group">
-            <label>Email</label>
-            <input
-              type="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              placeholder="Enter your email"
-              required
-            />
-          </div>
-          <div className="input-group">
-            <label>Date of Birth</label>
-            <input
-              type="date"
-              name="dob"
-              value={formData.dob}
-              onChange={handleChange}
-              required
-            />
-          </div>
-          <div className="input-group">
-            <label>Password</label>
-            <div style={{ position: 'relative' }}>
+        
+        {step === 1 ? (
+          <form onSubmit={handleSubmit}>
+            <div className="input-group">
+              <label>First Name</label>
               <input
-                type={showPassword ? "text" : "password"}
-                name="password"
-                value={formData.password}
+                type="text"
+                name="firstName"
+                value={formData.firstName}
                 onChange={handleChange}
-                placeholder="Create a password"
+                placeholder="Enter your first name"
                 required
-                style={{ paddingRight: 72 }}
               />
-              <button
-                type="button"
-                onClick={() => setShowPassword(s => !s)}
-                aria-label={showPassword ? "Hide password" : "Show password"}
-                title={showPassword ? "Hide" : "Show"}
-                style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', padding: 0, border: 'none', background: 'transparent', cursor: 'pointer', fontSize: 18, lineHeight: 1 }}
-              >
-                {showPassword ? "🙈" : "👁"}
-              </button>
             </div>
-            {passwordIssues.length > 0 ? (
-              <div style={{ color: 'red', fontSize: 12, marginTop: 6 }}>
-                {passwordIssues.map((p, i) => (
-                  <div key={i}>• {p}</div>
-                ))}
-              </div>
-            ) : formData.password ? (
-              <div style={{ color: 'green', fontSize: 12, marginTop: 6 }}>
-                Strong password
-              </div>
-            ) : null}
-          </div>
-          <div className="input-group">
-            <label>Confirm Password</label>
-            <div style={{ position: 'relative' }}>
+            <div className="input-group">
+              <label>Last Name</label>
               <input
-                type={showConfirm ? "text" : "password"}
-                name="confirmPassword"
-                value={formData.confirmPassword}
+                type="text"
+                name="lastName"
+                value={formData.lastName}
                 onChange={handleChange}
-                placeholder="Confirm your password"
+                placeholder="Enter your last name"
                 required
-                style={{ paddingRight: 72 }}
               />
-              <button
-                type="button"
-                onClick={() => setShowConfirm(s => !s)}
-                aria-label={showConfirm ? "Hide password" : "Show password"}
-                title={showConfirm ? "Hide" : "Show"}
-                style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', padding: 0, border: 'none', background: 'transparent', cursor: 'pointer', fontSize: 18, lineHeight: 1 }}
-              >
-                {showConfirm ? "🙈" : "👁"}
-              </button>
             </div>
+            <div className="input-group">
+              <label>Username</label>
+              <input
+                type="text"
+                name="username"
+                value={formData.username}
+                onChange={handleChange}
+                placeholder="Choose a username"
+                required
+              />
+            </div>
+            <div className="input-group">
+              <label>Mobile Number</label>
+              <input
+                type="tel"
+                name="mobile"
+                value={formData.mobile}
+                onChange={handleChange}
+                placeholder="Enter your mobile number"
+                required
+              />
+            </div>
+            <div className="input-group">
+              <label>Address</label>
+              <input
+                type="text"
+                name="address"
+                value={formData.address}
+                onChange={handleChange}
+                placeholder="Enter your address"
+                required
+              />
+            </div>
+            <div className="input-group">
+              <label>Email</label>
+              <input
+                type="email"
+                name="email"
+                value={formData.email}
+                onChange={handleChange}
+                placeholder="Enter your email"
+                required
+              />
+            </div>
+            <div className="input-group">
+              <label>Date of Birth</label>
+              <input
+                type="date"
+                name="dob"
+                value={formData.dob}
+                onChange={handleChange}
+                required
+              />
+            </div>
+            <div className="input-group">
+              <label>Password</label>
+              <div style={{ position: 'relative' }}>
+                <input
+                  type={showPassword ? "text" : "password"}
+                  name="password"
+                  value={formData.password}
+                  onChange={handleChange}
+                  placeholder="Create a password"
+                  required
+                  style={{ paddingRight: 72 }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(s => !s)}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                  title={showPassword ? "Hide" : "Show"}
+                  style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', padding: 0, border: 'none', background: 'transparent', cursor: 'pointer', fontSize: 18, lineHeight: 1 }}
+                >
+                  {showPassword ? "🙈" : "👁"}
+                </button>
+              </div>
+              {passwordIssues.length > 0 ? (
+                <div style={{ color: 'red', fontSize: 12, marginTop: 6 }}>
+                  {passwordIssues.map((p, i) => (
+                    <div key={i}>• {p}</div>
+                  ))}
+                </div>
+              ) : formData.password ? (
+                <div style={{ color: 'green', fontSize: 12, marginTop: 6 }}>
+                  Strong password
+                </div>
+              ) : null}
+            </div>
+            <div className="input-group">
+              <label>Confirm Password</label>
+              <div style={{ position: 'relative' }}>
+                <input
+                  type={showConfirm ? "text" : "password"}
+                  name="confirmPassword"
+                  value={formData.confirmPassword}
+                  onChange={handleChange}
+                  placeholder="Confirm your password"
+                  required
+                  style={{ paddingRight: 72 }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirm(s => !s)}
+                  aria-label={showConfirm ? "Hide password" : "Show password"}
+                  title={showConfirm ? "Hide" : "Show"}
+                  style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', padding: 0, border: 'none', background: 'transparent', cursor: 'pointer', fontSize: 18, lineHeight: 1 }}
+                >
+                  {showConfirm ? "🙈" : "👁"}
+                </button>
+              </div>
+            </div>
+            <button type="submit" className="register-btn" disabled={loading}>
+              {loading ? "Sending OTP..." : "Register"}
+            </button>
+          </form>
+        ) : (
+          <form onSubmit={handleVerifyAndRegister}>
+            <p style={{ marginBottom: '20px', color: '#666' }}>
+              We've sent a 6-digit OTP to <strong>{formData.email}</strong>. Please enter it below to complete your registration.
+            </p>
+            <div className="input-group">
+              <label>Enter OTP</label>
+              <input
+                type="text"
+                value={otpCode}
+                onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                placeholder="000000"
+                style={{ textAlign: 'center', fontSize: '24px', letterSpacing: '8px' }}
+                required
+              />
+            </div>
+            <button type="submit" className="register-btn" disabled={loading || otpCode.length !== 6}>
+              {loading ? "Verifying..." : "Verify & Create Account"}
+            </button>
+            <button 
+              type="button" 
+              className="back-btn" 
+              onClick={() => setStep(1)}
+              style={{ width: '100%', marginTop: '10px', background: 'transparent', border: '1px solid #ddd', color: '#666' }}
+            >
+              Back to Details
+            </button>
+          </form>
+        )}
+
+        {step === 1 && (
+          <div className="google-login-container" style={{ marginTop: '15px', display: 'flex', justifyContent: 'center' }}>
+            <GoogleLogin
+              clientId={process.env.REACT_APP_GOOGLE_CLIENT_ID || "370403775632-ekl0knt2d7ukm2uk94qde5sqr3gho6ck.apps.googleusercontent.com"}
+              onSuccess={handleGoogleSuccess}
+              onError={handleGoogleError}
+              useOneTap
+              theme="filled_blue"
+              shape="rectangular"
+            />
           </div>
-          <button type="submit" className="register-btn">
-            Create Account
-          </button>
-        </form>
-        <div className="google-login-container" style={{ marginTop: '15px', display: 'flex', justifyContent: 'center' }}>
-          <GoogleLogin
-            clientId={process.env.REACT_APP_GOOGLE_CLIENT_ID || "370403775632-ekl0knt2d7ukm2uk94qde5sqr3gho6ck.apps.googleusercontent.com"}
-            onSuccess={handleGoogleSuccess}
-            onError={handleGoogleError}
-            useOneTap
-            theme="filled_blue"
-            shape="rectangular"
-          />
-        </div>
+        )}
       </div>
     </div>
   );

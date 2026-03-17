@@ -196,6 +196,8 @@ const Profile = () => {
     { id: 3, text: 'Updated profile picture', date: '1 week ago' },
   ];
 
+  const isGoogleUserWithoutPassword = user?.isGoogleUser && !user?.hasPassword;
+
   if (loading) return <div className="loading-spinner">Loading Profile...</div>;
   if (!user && !loading) return <div className="error-message">User not found</div>;
 
@@ -419,7 +421,7 @@ const Profile = () => {
                 <button 
                   className="btn-edit-profile"
                   type="button"
-                  onClick={() => { setChangePwdOpen(o => !o); setPwdMethod(null); setPwdErr(''); setPwdMsg(''); }}
+                  onClick={() => { setChangePwdOpen(o => !o); setPwdMethod(isGoogleUserWithoutPassword ? 'set' : null); setPwdErr(''); setPwdMsg(''); }}
                 >
                   Change Password
                 </button>
@@ -427,12 +429,65 @@ const Profile = () => {
               {changePwdOpen && (
                 <div style={{ marginTop: 12, padding: '12px', border: '1px solid #eee', borderRadius: 8 }}>
                   <div className="edit-form-group" style={{ marginBottom: 12 }}>
-                    <label className="edit-form-label">Choose Method</label>
-                    <div style={{ display: 'flex', gap: 10 }}>
-                      <label><input type="radio" name="pwdMethod" checked={pwdMethod === 'current'} onChange={() => setPwdMethod('current')} /> Use Current Password</label>
-                      <label><input type="radio" name="pwdMethod" checked={pwdMethod === 'otp'} onChange={() => { setPwdMethod('otp'); setOtpSent(false); setOtpVerified(false); setPwdOtp(''); }} /> Use OTP (Verify Email)</label>
-                    </div>
+                    {!isGoogleUserWithoutPassword && (
+                      <>
+                        <label className="edit-form-label">Choose Method</label>
+                        <div style={{ display: 'flex', gap: 10 }}>
+                          <label><input type="radio" name="pwdMethod" checked={pwdMethod === 'current'} onChange={() => setPwdMethod('current')} /> Use Current Password</label>
+                          <label><input type="radio" name="pwdMethod" checked={pwdMethod === 'otp'} onChange={() => { setPwdMethod('otp'); setOtpSent(false); setOtpVerified(false); setPwdOtp(''); }} /> Use OTP (Verify Email)</label>
+                        </div>
+                      </>
+                    )}
                   </div>
+                  {pwdMethod === 'set' && (
+                    <>
+                      <div className="edit-form-group">
+                        <label className="edit-form-label">New Password</label>
+                        <div style={{ position: 'relative' }}>
+                          <input 
+                            type={showNew ? "text" : "password"} 
+                            value={pwdNew} 
+                            onChange={(e) => { setPwdNew(e.target.value); setPwdIssues(computePasswordIssues(e.target.value)); }} 
+                            placeholder="Enter new password"
+                            className="edit-form-input"
+                            style={{ paddingRight: 72 }}
+                          />
+                          <button type="button" onClick={() => setShowNew(s => !s)} aria-label={showNew ? "Hide password" : "Show password"} title={showNew ? "Hide" : "Show"} style={{ position:'absolute', right:8, top:'50%', transform:'translateY(-50%)', padding:0, border:'none', background:'transparent', cursor:'pointer', fontSize:18, lineHeight:1 }}>{showNew ? "🙈" : "👁"}</button>
+                        </div>
+                        {pwdIssues.length > 0 ? (<div style={{ color:'red', fontSize:12, marginTop:6 }}>{pwdIssues.map((p,i)=>(<div key={i}>• {p}</div>))}</div>) : (pwdNew ? <div style={{ color:'green', fontSize:12, marginTop:6 }}>Strong password</div> : null)}
+                      </div>
+                      <div className="edit-form-group">
+                        <label className="edit-form-label">Confirm New Password</label>
+                        <div style={{ position: 'relative' }}>
+                          <input 
+                            type={showConfirm ? "text" : "password"} 
+                            value={pwdNewConfirm} 
+                            onChange={(e) => setPwdNewConfirm(e.target.value)} 
+                            placeholder="Confirm new password"
+                            className="edit-form-input"
+                            style={{ paddingRight: 72 }}
+                          />
+                          <button type="button" onClick={() => setShowConfirm(s => !s)} aria-label={showConfirm ? "Hide password" : "Show password"} title={showConfirm ? "Hide" : "Show"} style={{ position:'absolute', right:8, top:'50%', transform:'translateY(-50%)', padding:0, border:'none', background:'transparent', cursor:'pointer', fontSize:18, lineHeight:1 }}>{showConfirm ? "🙈" : "👁"}</button>
+                        </div>
+                      </div>
+                      {pwdErr && <div className="error-message" style={{marginTop: 6}}>{pwdErr}</div>}
+                      {pwdMsg && <div className="success-message" style={{marginTop: 6, color: 'green'}}>{pwdMsg}</div>}
+                      <button className="btn-edit-profile" type="button" onClick={async () => {
+                        setPwdErr(''); setPwdMsg('');
+                        if (pwdNew !== pwdNewConfirm) { setPwdErr('New password and confirm password must match'); return; }
+                        const issues = computePasswordIssues(pwdNew);
+                        if (issues.length > 0) { setPwdIssues(issues); setPwdErr(issues.join(', ')); return; }
+                        try {
+                            const userInfo = JSON.parse(sessionStorage.getItem('userInfo') || '{}');
+                            await axios.post(`${API_URL}/users/set-password`, { newPassword: pwdNew }, { headers: { Authorization: `Bearer ${userInfo.token}` } });
+                            setPwdMsg('Password set successfully');
+                          setPwdNew(''); setPwdNewConfirm(''); setPwdIssues([]);
+                          setChangePwdOpen(false); setPwdMethod(null);
+                          fetchUserProfile(); // Re-fetch user to get hasPassword flag
+                        } catch (e) { setPwdErr(e.response?.data?.message || 'Failed to set password'); }
+                      }}>Set Password</button>
+                    </>
+                  )}
                   {pwdMethod === 'current' && (
                     <>
                       <div className="edit-form-group">

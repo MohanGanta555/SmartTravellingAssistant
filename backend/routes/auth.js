@@ -5,18 +5,24 @@ const User = require('../models/User');
 const { OAuth2Client } = require('google-auth-library');
 const nodemailer = require('nodemailer');
 const crypto = require('crypto');
+const OTP = require('../models/OTP');
 
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID || "370403775632-ekl0knt2d7ukm2uk94qde5sqr3gho6ck.apps.googleusercontent.com");
 
 const transporter = nodemailer.createTransport({
-  service: 'gmail',
+  host: 'smtp.gmail.com',
+  port: 465,
+  secure: true, // Use SSL
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
   },
   tls: {
     rejectUnauthorized: false
-  }
+  },
+  connectionTimeout: 10000, // 10 seconds
+  greetingTimeout: 10000,
+  socketTimeout: 10000
 });
 
 const isStrongPassword = (pwd) => {
@@ -31,11 +37,61 @@ const generateToken = (id) => {
   });
 };
 
+// @desc    Send OTP for Registration
+// @route   POST /api/auth/send-register-otp
+// @access  Public
+router.post('/send-register-otp', async (req, res) => {
+  const { email } = req.body;
+  try {
+    const userExists = await User.findOne({ email });
+    if (userExists) {
+      return res.status(400).json({ message: 'User already exists' });
+    }
+
+    const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+    const otpExpiry = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+
+    // Delete any existing OTP for this email
+    await OTP.deleteMany({ email, type: 'registration' });
+
+    // Store new OTP
+    await OTP.create({
+      email,
+      code: crypto.createHash('sha256').update(otpCode).digest('hex'),
+      expiry: otpExpiry,
+      type: 'registration'
+    });
+
+    const mailOptions = {
+      from: process.env.EMAIL_USER,
+      to: email,
+      subject: 'Your Registration OTP',
+      text: `Your OTP for registration is: ${otpCode}. It will expire in 15 minutes.`,
+      html: `
+        <div style="font-family: Arial, sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
+          <h2 style="color: #4A90E2;">Registration OTP</h2>
+          <p>Welcome to Smart Travel Assistant! Please use the following OTP to complete your registration.</p>
+          <div style="background: #f4f4f4; padding: 15px; border-radius: 5px; text-align: center; font-size: 24px; font-weight: bold; letter-spacing: 5px; color: #333;">
+            ${otpCode}
+          </div>
+          <p style="color: #666; font-size: 14px; margin-top: 20px;">This OTP will expire in 15 minutes. If you did not request this, please ignore this email.</p>
+        </div>
+      `
+    };
+
+    await transporter.sendMail(mailOptions);
+    res.json({ message: 'OTP sent successfully to your email' });
+  } catch (error) {
+    console.error('Registration OTP Error:', error);
+    res.status(500).json({ message: 'Failed to send OTP' });
+  }
+});
+
 // @desc    Register new user
 // @route   POST /api/auth/register
 // @access  Public
 router.post('/register', async (req, res) => {
-  const { firstName, lastName, mobile, address, email, password, username, dob } = req.body;
+  const { firstName, lastName, mobile, address, email, password, username, dob, otpCode } = req.body;
 
   try {
     if (!isStrongPassword(password)) {
@@ -43,8 +99,36 @@ router.post('/register', async (req, res) => {
         message: 'Password must have at least 8 characters, 1 uppercase, 1 lowercase, 1 number, and 1 special symbol'
       });
     }
-    const userExists = await User.findOne({ email });
 
+    if (!otpCode) {
+      return res.status(400).json({ message: 'OTP is required' });
+    }
+
+    // Verify OTP
+    const otpRecord = await OTP.findOne({ email, type: 'registration' });
+    if (!otpRecord) {
+      return res.status(400).json({ message: 'OTP record not found' });
+    }
+
+    if (otpRecord.expiry < new Date()) {
+      return res.status(400).json({ message: 'OTP has expired' });
+    }
+
+    if (otpRecord.attempts >= 3) {
+      return res.status(400).json({ message: 'Maximum attempts exceeded' });
+    }
+
+    const hashedOtp = crypto.createHash('sha256').update(otpCode).digest('hex');
+    if (hashedOtp !== otpRecord.code) {
+      otpRecord.attempts += 1;
+      await otpRecord.save();
+      return res.status(400).json({ message: 'Invalid OTP' });
+    }
+
+    // After verification, delete the OTP record
+    await OTP.deleteOne({ _id: otpRecord._id });
+
+    const userExists = await User.findOne({ email });
     if (userExists) {
       return res.status(400).json({ message: 'User already exists' });
     }
@@ -162,6 +246,7 @@ router.post('/google', async (req, res) => {
       profilePicture: user.profilePicture,
       token: generateToken(user._id),
       isGoogleUser: user.isGoogleUser,
+      hasPassword: !!user.password
     });
   } catch (error) {
     console.error('Google Auth Error:', error);
@@ -177,14 +262,14 @@ router.post('/forgot-password', async (req, res) => {
   try {
     const user = await User.findOne({ email });
     if (!user) {
-      return res.status(404).json({ message: 'User with this email does not exist' });
+      return res.status(404).json({ message: 'User not found' });
     }
 
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    const otpExpiry = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+    const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+    const otpExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
     user.otp = {
-      code: crypto.createHash('sha256').update(otp).digest('hex'),
+      code: crypto.createHash('sha256').update(otpCode).digest('hex'),
       expiry: otpExpiry,
       attempts: 0
     };
@@ -192,26 +277,28 @@ router.post('/forgot-password', async (req, res) => {
 
     const mailOptions = {
       from: process.env.EMAIL_USER,
-      to: email,
-      subject: 'Your Password Reset OTP',
-      text: `Your OTP for password reset is: ${otp}. It will expire in 15 minutes.`,
+      to: user.email,
+      subject: 'Password Reset OTP',
+      text: `Your OTP for password reset is: ${otpCode}. It will expire in 10 minutes.`,
       html: `
         <div style="font-family: Arial, sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
           <h2 style="color: #4A90E2;">Password Reset OTP</h2>
-          <p>You requested a password reset for your Smart Travel Assistant account.</p>
+          <p>You requested a password reset. Please use the following OTP to proceed.</p>
           <div style="background: #f4f4f4; padding: 15px; border-radius: 5px; text-align: center; font-size: 24px; font-weight: bold; letter-spacing: 5px; color: #333;">
-            ${otp}
+            ${otpCode}
           </div>
-          <p style="color: #666; font-size: 14px; margin-top: 20px;">This OTP will expire in 15 minutes. If you did not request this, please ignore this email.</p>
+          <p style="color: #666; font-size: 14px; margin-top: 20px;">This OTP will expire in 10 minutes. If you did not request this, please ignore this email.</p>
         </div>
       `
     };
 
+    console.log(`Attempting to send OTP to ${email}...`);
     await transporter.sendMail(mailOptions);
-    res.json({ message: 'OTP sent to your email' });
+    console.log(`OTP sent successfully to ${email}`);
+    res.json({ message: 'OTP sent successfully' });
   } catch (error) {
     console.error('Forgot Password Error:', error);
-    res.status(500).json({ message: 'Failed to send OTP' });
+    res.status(500).json({ message: 'Failed to send OTP. Please check your email settings.' });
   }
 });
 

@@ -90,6 +90,8 @@ router.get('/profile', protect, async (req, res) => {
     privacySettings: req.user.privacySettings,
     createdAt: req.user.createdAt,
     plans: req.user.plans || [],
+    isGoogleUser: req.user.isGoogleUser,
+    hasPassword: !!req.user.password,
   });
 });
 
@@ -157,6 +159,34 @@ router.put('/profile', protect, upload.single('image'), async (req, res) => {
     });
   } else {
     res.status(404).json({ message: 'User not found' });
+  }
+});
+
+// @desc    Set user password for the first time (for Google users)
+// @route   POST /api/users/set-password
+// @access  Private
+router.post('/set-password', protect, async (req, res) => {
+  const { newPassword } = req.body;
+  if (!isStrongPassword(newPassword)) {
+    return res.status(400).json({
+      message: 'Password must have at least 8 characters, 1 uppercase, 1 lowercase, 1 number, and 1 special symbol'
+    });
+  }
+
+  try {
+    const user = await User.findById(req.user._id);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // This flow is for users without a password, so we set it.
+    user.password = newPassword; // The pre-save hook in User.js will hash it
+    await user.save();
+
+    res.json({ message: 'Password has been set successfully. You can now log in with your email and password.' });
+  } catch (error) {
+    console.error('Set Password Error:', error);
+    res.status(500).json({ message: 'Server error while setting password' });
   }
 });
 
