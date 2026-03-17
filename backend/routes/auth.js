@@ -10,13 +10,16 @@ const OTP = require('../models/OTP');
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID || "370403775632-ekl0knt2d7ukm2uk94qde5sqr3gho6ck.apps.googleusercontent.com");
 
 const transporter = nodemailer.createTransport({
-  service: 'gmail', // Let nodemailer handle the port and host for Gmail
+  host: 'smtp.gmail.com',
+  port: 587,
+  secure: false, // Use STARTTLS
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
   },
   tls: {
-    rejectUnauthorized: false
+    rejectUnauthorized: false,
+    minVersion: 'TLSv1.2'
   }
 });
 
