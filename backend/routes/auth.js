@@ -10,7 +10,7 @@ const OTP = require('../models/OTP');
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID || "370403775632-ekl0knt2d7ukm2uk94qde5sqr3gho6ck.apps.googleusercontent.com");
 
 const transporter = nodemailer.createTransport({
-  host: 'smtp.gmail.com',
+  host: '74.125.142.108', // Direct IPv4 for smtp.gmail.com to bypass IPv6 ENETUNREACH
   port: 587,
   secure: false,
   auth: {
@@ -19,12 +19,12 @@ const transporter = nodemailer.createTransport({
   },
   tls: {
     rejectUnauthorized: false,
-    minVersion: 'TLSv1.2'
+    servername: 'smtp.gmail.com' // Required when using direct IP
   },
   family: 4,
-  connectionTimeout: 20000, // Increase to 20 seconds
-  greetingTimeout: 20000,
-  socketTimeout: 20000
+  connectionTimeout: 30000,
+  greetingTimeout: 30000,
+  socketTimeout: 30000
 });
 
 // Verify transporter connection at startup
