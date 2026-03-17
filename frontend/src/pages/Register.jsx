@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { GoogleLogin } from '@react-oauth/google';
 import axios from "axios";
 import "../styles/Register.css";
+import API_URL from "../api";
 
 function Register() {
   const navigate = useNavigate();
@@ -57,8 +58,7 @@ function Register() {
     }
 
     try {
-      const backendUrl = process.env.REACT_APP_BACKEND_URL || "http://localhost:5000";
-      const response = await axios.post(`${backendUrl}/api/auth/register`, {
+      const response = await axios.post(`${API_URL}/auth/register`, {
         firstName: formData.firstName,
         lastName: formData.lastName,
         username: formData.username,
@@ -79,8 +79,7 @@ function Register() {
 
   const handleGoogleSuccess = async (credentialResponse) => {
     try {
-      const backendUrl = process.env.REACT_APP_BACKEND_URL || "http://localhost:5000";
-      const response = await axios.post(`${backendUrl}/api/auth/google`, {
+      const response = await axios.post(`${API_URL}/auth/google`, {
         credential: credentialResponse.credential,
       });
 

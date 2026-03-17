@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import '../styles/Profile.css';
+import API_URL from '../api';
 
 const Profile = () => {
   const navigate = useNavigate();
@@ -74,8 +75,7 @@ const Profile = () => {
         },
       };
 
-      const backendUrl = process.env.REACT_APP_BACKEND_URL || "http://localhost:5000";
-      const { data } = await axios.get(`${backendUrl}/api/users/profile`, config);
+      const { data } = await axios.get(`${API_URL}/users/profile`, config);
       setUser(data);
       setFormData({
         firstName: data.firstName || '',
@@ -164,8 +164,7 @@ const Profile = () => {
         data.append('image', selectedFile);
         data.append('privacySettings', JSON.stringify(formData.privacySettings));
         
-        const backendUrl = process.env.REACT_APP_BACKEND_URL || "http://localhost:5000";
-        const { data: res } = await axios.put(`${backendUrl}/api/users/profile`, data, {
+        const { data: res } = await axios.put(`${API_URL}/users/profile`, data, {
             headers: {
                 Authorization: `Bearer ${userInfo.token}`,
                 'Content-Type': 'multipart/form-data',
@@ -173,8 +172,7 @@ const Profile = () => {
         });
         responseData = res;
       } else {
-        const backendUrl = process.env.REACT_APP_BACKEND_URL || "http://localhost:5000";
-        const { data: res } = await axios.put(`${backendUrl}/api/users/profile`, formData, config);
+        const { data: res } = await axios.put(`${API_URL}/users/profile`, formData, config);
         responseData = res;
       }
       
@@ -449,8 +447,7 @@ const Profile = () => {
                               if (!pwdOld) return;
                               try {
                                 const userInfo = JSON.parse(sessionStorage.getItem('userInfo') || '{}');
-                                const backendUrl = process.env.REACT_APP_BACKEND_URL || "http://localhost:5000";
-                                const { data } = await axios.post(`${backendUrl}/api/users/verify-password`, { password: pwdOld }, {
+                                const { data } = await axios.post(`${API_URL}/users/verify-password`, { password: pwdOld }, {
                                   headers: { Authorization: `Bearer ${userInfo.token}` }
                                 });
                                 setPwdOldStatus(data?.ok ? 'matched' : 'incorrect');
@@ -505,8 +502,7 @@ const Profile = () => {
                         if (issues.length > 0) { setPwdIssues(issues); setPwdErr(issues.join(', ')); return; }
                         try {
                             const userInfo = JSON.parse(sessionStorage.getItem('userInfo') || '{}');
-                            const backendUrl = process.env.REACT_APP_BACKEND_URL || "http://localhost:5000";
-                            await axios.post(`${backendUrl}/api/users/change-password`, { oldPassword: pwdOld, newPassword: pwdNew }, { headers: { Authorization: `Bearer ${userInfo.token}` } });
+                            await axios.post(`${API_URL}/users/change-password`, { oldPassword: pwdOld, newPassword: pwdNew }, { headers: { Authorization: `Bearer ${userInfo.token}` } });
                             setPwdMsg('Password updated successfully');
                           setPwdOld(''); setPwdNew(''); setPwdNewConfirm(''); setPwdIssues([]);
                           setChangePwdOpen(false); setPwdMethod(null);
@@ -529,8 +525,7 @@ const Profile = () => {
                               setOtpLoading(true);
                               setPwdErr('');
                               try {
-                                const backendUrl = process.env.REACT_APP_BACKEND_URL || "http://localhost:5000";
-                                await axios.post(`${backendUrl}/api/auth/forgot-password`, { email: user?.email });
+                                await axios.post(`${API_URL}/auth/forgot-password`, { email: user?.email });
                                 setOtpSent(true);
                                 setPwdMsg('OTP sent successfully');
                               } catch (e) {
@@ -565,8 +560,7 @@ const Profile = () => {
                                 setOtpLoading(true);
                                 setPwdErr('');
                                 try {
-                                  const backendUrl = process.env.REACT_APP_BACKEND_URL || "http://localhost:5000";
-                                  await axios.post(`${backendUrl}/api/auth/verify-otp`, { email: user?.email, otp: pwdOtp });
+                                  await axios.post(`${API_URL}/auth/verify-otp`, { email: user?.email, otp: pwdOtp });
                                   setOtpVerified(true);
                                   setPwdMsg('OTP verified successfully');
                                 } catch (e) {
@@ -626,8 +620,7 @@ const Profile = () => {
                             const issues = computePasswordIssues(pwdNew);
                             if (issues.length > 0) { setPwdIssues(issues); setPwdErr(issues.join(', ')); return; }
                             try {
-                              const backendUrl = process.env.REACT_APP_BACKEND_URL || "http://localhost:5000";
-                              await axios.post(`${backendUrl}/api/auth/reset-password`, { email: user?.email, otp: pwdOtp, newPassword: pwdNew });
+                              await axios.post(`${API_URL}/auth/reset-password`, { email: user?.email, otp: pwdOtp, newPassword: pwdNew });
                               setPwdMsg('Password updated successfully');
                               setPwdNew(''); setPwdNewConfirm(''); setPwdIssues([]); setPwdOtp('');
                               setOtpSent(false); setOtpVerified(false);
@@ -676,8 +669,7 @@ const Profile = () => {
                           if (window.confirm("Are you sure you want to delete this trip?")) {
                             try {
                               const userInfo = JSON.parse(sessionStorage.getItem('userInfo'));
-                              const backendUrl = process.env.REACT_APP_BACKEND_URL || "http://localhost:5000";
-                              await axios.delete(`${backendUrl}/api/users/plans/${idx}`, {
+                              await axios.delete(`${API_URL}/users/plans/${idx}`, {
                                 headers: { Authorization: `Bearer ${userInfo.token}` }
                               });
                               fetchUserProfile();

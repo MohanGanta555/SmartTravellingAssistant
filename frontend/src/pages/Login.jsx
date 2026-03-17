@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { GoogleLogin } from '@react-oauth/google';
 import axios from "axios";
 import "../styles/Login.css";
+import API_URL from "../api";
 
 function Login() {
   const navigate = useNavigate();
@@ -20,8 +21,7 @@ function Login() {
     setError("");
     
     try {
-      const backendUrl = process.env.REACT_APP_BACKEND_URL || "http://localhost:5000";
-      const response = await axios.post(`${backendUrl}/api/auth/login`, {
+      const response = await axios.post(`${API_URL}/auth/login`, {
         email,
         password,
       });
@@ -39,8 +39,7 @@ function Login() {
 
   const handleGoogleSuccess = async (credentialResponse) => {
     try {
-      const backendUrl = process.env.REACT_APP_BACKEND_URL || "http://localhost:5000";
-      const response = await axios.post(`${backendUrl}/api/auth/google`, {
+      const response = await axios.post(`${API_URL}/auth/google`, {
         credential: credentialResponse.credential,
       });
 

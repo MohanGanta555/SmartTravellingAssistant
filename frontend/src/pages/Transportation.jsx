@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import axios from "axios";
 import "../styles/Places.css";
+import API_URL from "../api";
 
 function Transportation() {
   const location = useLocation();
@@ -35,7 +36,7 @@ function Transportation() {
   const [errorReturn, setErrorReturn] = useState("");
 
   const API_KEY = process.env.REACT_APP_AVIATION_API_KEY;
-  const BACKEND_BASE = process.env.REACT_APP_BACKEND_URL || "http://localhost:5000";
+  
 
   const cityIataMap = {
     "new delhi": "DEL",
@@ -150,7 +151,7 @@ function Transportation() {
         setLoading(false);
         return;
       }
-      const { data } = await axios.get(`${BACKEND_BASE}/api/transport/local-trains`, {
+      const { data } = await axios.get(`${API_URL}/transport/local-trains`, {
         params: { sourceStation: src, destinationStation: dst, startDate: date, endDate: tripData?.endDate || date },
       });
       const dateEntry = (data?.dates || []).find(d => d.date === (new Date(date)).toISOString().slice(0,10));
@@ -222,7 +223,7 @@ function Transportation() {
     } finally {
       setLoading(false);
     }
-  }, [BACKEND_BASE, tripData]);
+  }, [API_URL, tripData]);
 
   const fetchBuses = useCallback(async () => {
     setLoading(true);
@@ -237,7 +238,7 @@ function Transportation() {
         setLoading(false);
         return;
       }
-      const { data } = await axios.get(`${BACKEND_BASE}/api/transport/buses`, {
+      const { data } = await axios.get(`${API_URL}/transport/buses`, {
         params: {
           sourceCity: src,
           destinationCity: dst,
@@ -352,7 +353,7 @@ function Transportation() {
     } finally {
       setLoading(false);
     }
-  }, [BACKEND_BASE, tripData]);
+  }, [API_URL, tripData]);
 
   /* generateGroundOptions removed */
 
@@ -434,7 +435,7 @@ function Transportation() {
         setLoadingReturn(false);
         return;
       }
-      const { data } = await axios.get(`${BACKEND_BASE}/api/transport/local-trains`, {
+      const { data } = await axios.get(`${API_URL}/transport/local-trains`, {
         params: { sourceStation: src, destinationStation: dst, startDate: date, endDate: date },
       });
       const dateEntry = (data?.dates || []).find(d => d.date === (new Date(date)).toISOString().slice(0,10));
@@ -506,7 +507,7 @@ function Transportation() {
     } finally {
       setLoadingReturn(false);
     }
-  }, [BACKEND_BASE, tripData]);
+  }, [API_URL, tripData]);
 
   const fetchBusesReturn = useCallback(async () => {
     setLoadingReturn(true);
@@ -520,7 +521,7 @@ function Transportation() {
         setLoadingReturn(false);
         return;
       }
-      const { data } = await axios.get(`${BACKEND_BASE}/api/transport/buses`, {
+      const { data } = await axios.get(`${API_URL}/transport/buses`, {
         params: {
           sourceCity: src,
           destinationCity: dst,
@@ -636,7 +637,7 @@ function Transportation() {
     } finally {
       setLoadingReturn(false);
     }
-  }, [BACKEND_BASE, tripData]);
+  }, [API_URL, tripData]);
 
   /* generateGroundReturnOptions removed */
 

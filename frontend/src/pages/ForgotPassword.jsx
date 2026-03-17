@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import axios from "axios";
 import "../styles/Login.css";
+import API_URL from "../api";
 
 function ForgotPassword() {
   const [step, setStep] = useState(1);
@@ -30,8 +31,7 @@ function ForgotPassword() {
     setMessage("");
     setLoading(true);
     try {
-      const backendUrl = process.env.REACT_APP_BACKEND_URL || "http://localhost:5000";
-      const { data } = await axios.post(`${backendUrl}/api/auth/forgot-password`, { email });
+      const { data } = await axios.post(`${API_URL}/auth/forgot-password`, { email });
       setMessage(data?.message || "OTP sent to your email");
       setStep(2);
     } catch (err) {
@@ -46,8 +46,7 @@ function ForgotPassword() {
     setMessage("");
     setLoading(true);
     try {
-      const backendUrl = process.env.REACT_APP_BACKEND_URL || "http://localhost:5000";
-      const { data } = await axios.post(`${backendUrl}/api/auth/verify-otp`, { email, otp });
+      const { data } = await axios.post(`${API_URL}/auth/verify-otp`, { email, otp });
       setMessage(data?.message || "OTP verified successfully");
       setStep(3);
     } catch (err) {
@@ -72,8 +71,7 @@ function ForgotPassword() {
     }
     setLoading(true);
     try {
-      const backendUrl = process.env.REACT_APP_BACKEND_URL || "http://localhost:5000";
-      const { data } = await axios.post(`${backendUrl}/api/auth/reset-password`, { 
+      const { data } = await axios.post(`${API_URL}/auth/reset-password`, { 
         email, 
         otp, 
         newPassword 

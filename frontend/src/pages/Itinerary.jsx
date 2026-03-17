@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import { useLocation, useNavigate } from "react-router-dom";
 import "../styles/Places.css";
+import API_URL from "../api";
 
 function Itinerary() {
   const location = useLocation();
@@ -812,8 +813,7 @@ function Itinerary() {
                         summary: d.summary
                       }))
                     };
-                    const backendUrl = process.env.REACT_APP_BACKEND_URL || "http://localhost:5000";
-                    await axios.post(`${backendUrl}/api/users/plans`, payload, {
+                    await axios.post(`${API_URL}/users/plans`, payload, {
                       headers: { Authorization: `Bearer ${userInfo.token}` }
                     });
                     setSaving(false);
