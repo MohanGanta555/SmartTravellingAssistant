@@ -449,7 +449,8 @@ const Profile = () => {
                               if (!pwdOld) return;
                               try {
                                 const userInfo = JSON.parse(sessionStorage.getItem('userInfo') || '{}');
-                                const { data } = await axios.post('http://localhost:5000/api/users/verify-password', { password: pwdOld }, {
+                                const backendUrl = process.env.REACT_APP_BACKEND_URL || "http://localhost:5000";
+                                const { data } = await axios.post(`${backendUrl}/api/users/verify-password`, { password: pwdOld }, {
                                   headers: { Authorization: `Bearer ${userInfo.token}` }
                                 });
                                 setPwdOldStatus(data?.ok ? 'matched' : 'incorrect');
@@ -503,9 +504,10 @@ const Profile = () => {
                         const issues = computePasswordIssues(pwdNew);
                         if (issues.length > 0) { setPwdIssues(issues); setPwdErr(issues.join(', ')); return; }
                         try {
-                          const userInfo = JSON.parse(sessionStorage.getItem('userInfo') || '{}');
-                          await axios.post('http://localhost:5000/api/users/change-password', { oldPassword: pwdOld, newPassword: pwdNew }, { headers: { Authorization: `Bearer ${userInfo.token}` } });
-                          setPwdMsg('Password updated successfully');
+                            const userInfo = JSON.parse(sessionStorage.getItem('userInfo') || '{}');
+                            const backendUrl = process.env.REACT_APP_BACKEND_URL || "http://localhost:5000";
+                            await axios.post(`${backendUrl}/api/users/change-password`, { oldPassword: pwdOld, newPassword: pwdNew }, { headers: { Authorization: `Bearer ${userInfo.token}` } });
+                            setPwdMsg('Password updated successfully');
                           setPwdOld(''); setPwdNew(''); setPwdNewConfirm(''); setPwdIssues([]);
                           setChangePwdOpen(false); setPwdMethod(null);
                         } catch (e) { setPwdErr(e.response?.data?.message || 'Failed to change password'); }
@@ -674,7 +676,8 @@ const Profile = () => {
                           if (window.confirm("Are you sure you want to delete this trip?")) {
                             try {
                               const userInfo = JSON.parse(sessionStorage.getItem('userInfo'));
-                              await axios.delete(`http://localhost:5000/api/users/plans/${idx}`, {
+                              const backendUrl = process.env.REACT_APP_BACKEND_URL || "http://localhost:5000";
+                              await axios.delete(`${backendUrl}/api/users/plans/${idx}`, {
                                 headers: { Authorization: `Bearer ${userInfo.token}` }
                               });
                               fetchUserProfile();
