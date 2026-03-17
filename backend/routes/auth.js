@@ -12,7 +12,7 @@ const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID || "370403775632-ek
 const transporter = nodemailer.createTransport({
   host: 'smtp.gmail.com',
   port: 587,
-  secure: false, // Use STARTTLS
+  secure: false,
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
@@ -20,7 +20,11 @@ const transporter = nodemailer.createTransport({
   tls: {
     rejectUnauthorized: false,
     minVersion: 'TLSv1.2'
-  }
+  },
+  family: 4,
+  connectionTimeout: 20000, // Increase to 20 seconds
+  greetingTimeout: 20000,
+  socketTimeout: 20000
 });
 
 // Verify transporter connection at startup
