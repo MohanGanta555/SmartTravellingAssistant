@@ -423,7 +423,7 @@ const Profile = () => {
                   type="button"
                   onClick={() => { setChangePwdOpen(o => !o); setPwdMethod(isGoogleUserWithoutPassword ? 'set' : null); setPwdErr(''); setPwdMsg(''); }}
                 >
-                  Change Password
+                  {isGoogleUserWithoutPassword ? 'Set Password' : 'Change Password'}
                 </button>
               </div>
               {changePwdOpen && (

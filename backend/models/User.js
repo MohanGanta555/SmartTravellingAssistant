@@ -82,6 +82,7 @@ const UserSchema = new mongoose.Schema({
     chosenTransportOption: Object,
     includeReturn: Boolean,
     chosenReturnTransportOption: Object,
+    primaryTransportCost: Number,
     selectedHotels: Array,
     finalBudget: Number,
     finalMinBudget: Number,

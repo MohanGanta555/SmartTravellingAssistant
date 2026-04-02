@@ -54,6 +54,28 @@ function Budget() {
   const [budgetInput, setBudgetInput] = useState("");
   const minBudget = totals.minTotal;
   const isValidBudget = Number(budgetInput || 0) >= minBudget;
+
+  const currentAllocation = useMemo(() => {
+    const finalBudget = Number(budgetInput || minBudget);
+    const fixedCosts = totals.primaryTransport + totals.accommodationCost;
+    const variableBudget = Math.max(0, finalBudget - fixedCosts);
+    const totalMinVariable = totals.localTransportCost + totals.foodCost;
+    
+    let allocatedLocal = totals.localTransportCost;
+    let allocatedFood = totals.foodCost;
+
+    if (totalMinVariable > 0 && variableBudget > 0) {
+      allocatedLocal = Math.round(variableBudget * (totals.localTransportCost / totalMinVariable));
+      allocatedFood = variableBudget - allocatedLocal;
+    }
+    
+    return {
+      local: allocatedLocal,
+      food: allocatedFood,
+      total: finalBudget
+    };
+  }, [budgetInput, totals, minBudget]);
+
   const [budgetConfirmed, setBudgetConfirmed] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [itineraryReady, setItineraryReady] = useState(() => {
@@ -133,10 +155,10 @@ function Budget() {
             <div className="cost-summary">
               <p><strong>Transport:</strong> ₹{totals.primaryTransport}</p>
               <p><strong>Accommodation:</strong> ₹{totals.accommodationCost}</p>
-              <p><strong>Local Transport:</strong> ₹{totals.localTransportCost}</p>
-              <p><strong>Food:</strong> ₹{totals.foodCost}</p>
+              <p><strong>Local Transport:</strong> ₹{currentAllocation.local}</p>
+              <p><strong>Food:</strong> ₹{currentAllocation.food}</p>
               <p style={{ fontSize: "1.2rem", marginTop: "10px" }}>
-                <strong>Minimum Budget:</strong> ₹{totals.minTotal}
+                <strong>{isValidBudget ? "Total Planned Budget:" : "Minimum Budget Required:"}</strong> ₹{isValidBudget ? currentAllocation.total : totals.minTotal}
               </p>
             </div>
 

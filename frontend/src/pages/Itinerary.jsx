@@ -126,7 +126,33 @@ function Itinerary() {
     const foodPerDayPerTraveler = 500;
     const foodCost = foodPerDayPerTraveler * diffDays * travelers;
     const minTotal = primaryTransport + accommodationCost + localTransportCost + foodCost;
-    return { diffDays, accommodationCost, localTransportCost, foodCost, minTotal, primaryTransport };
+
+    // Allocate based on User's Final Budget if available
+    const finalBudget = Number(tripData.finalBudget || minTotal);
+    
+    // Fixed costs
+    const fixedCosts = primaryTransport + accommodationCost;
+    const variableBudget = Math.max(0, finalBudget - fixedCosts);
+    
+    // Proportional allocation for variable costs (Local Transport & Food)
+    const totalMinVariable = localTransportCost + foodCost;
+    let allocatedLocal = localTransportCost;
+    let allocatedFood = foodCost;
+
+    if (totalMinVariable > 0 && variableBudget > 0) {
+      allocatedLocal = Math.round(variableBudget * (localTransportCost / totalMinVariable));
+      allocatedFood = variableBudget - allocatedLocal;
+    }
+
+    return { 
+      diffDays, 
+      accommodationCost, 
+      localTransportCost: allocatedLocal, 
+      foodCost: allocatedFood, 
+      minTotal, 
+      primaryTransport,
+      finalBudget
+    };
   }, [tripData]);
   const formatTransport = (opt, isReturn) => {
     if (!opt) return "";
@@ -649,8 +675,8 @@ function Itinerary() {
             <h2>🔍 Trip Overview</h2>
             <div className="trip-summary" style={{ gap: "12px", flexWrap: "wrap", justifyContent: 'flex-start', margin: '0' }}>
               <span>🚗 {tripData.transportMode.toUpperCase()} {tripData.includeReturn ? "(Round Trip)" : "(One Way)"}</span>
-              <span>💰 Est. Min: ₹{tripData.finalMinBudget || 0}</span>
-              <span>💵 Planned: ₹{tripData.finalBudget || 0}</span>
+              <span>💰 Est. Min: ₹{budgetTotals.minTotal || 0}</span>
+              <span>💵 Planned: ₹{budgetTotals.finalBudget || 0}</span>
             </div>
             {renderHotels()}
             {saveError && <p className="error-message">{saveError}</p>}
